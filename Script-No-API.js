@@ -975,3 +975,10 @@ document.addEventListener('click', function(event) {
        
     }
 });
+
+
+// Reload iframe bằng cách gán lại src
+document.getElementById("refresh-onboard").addEventListener("click", function () {
+    let iframe = document.getElementById("iframe-onboard");
+    iframe.src = iframe.src;
+});
