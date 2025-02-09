@@ -1,2050 +1,724 @@
-:root {
-    --background-color: white;
-    --gray-background-color: 205, 205, 205;
-    --colorblack: black;
-    --colorwhite: white;
-    --colorblue: #042baa;
-    --colorlightblue: #2443a7;
-    --colorlightbluergb: 36, 67, 167;
-    --heightOpenButton: 45px;
-    --colorgrayrgb: 128, 128, 128;
+// đăng ký the service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+            console.log('Service Worker registered with scope:', registration.scope);
+        }).catch((error) => {
+            console.log('Service Worker registration failed:', error);
+        });
+    });
 }
 
-/* Loader styles */
-.loader {
-    border: 3px solid #0075ff;
-    /* Light gray */
-    border-top: 3px solid #ffffff;
-    /* Blue */
-    border-radius: 50%;
-    width: 20px;
-    aspect-ratio: 1/1;
-    animation: spin 1s linear infinite;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: absolute;
-}
 
-/* Animation for spinning effect */
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
+
+
+// Sửa lại giá trị của ô A1 trong Sheet "Lich Truc (copy)"
+document.getElementById('updateA1Btn').addEventListener('click', function () {
+    // Lấy giá trị từ các input
+    var sheetName = document.getElementById('sua-ten-sheet').value;
+    var cellReference = document.getElementById('sua-o-dau-tien-trong-sheet').value;
+    var lastcellReference = document.getElementById('sua-o-cuoi-cung-trong-sheet').value;
+    var statusContainer = document.getElementById('status-of-updating-lichtruc-container');
+    var loaderupdatelichtruc = document.getElementById('loader-update-lichtruc');
+    var updateidlichtruc = document.getElementById('update-id-lichtruc');
+
+    // Xóa thông báo cũ
+    statusContainer.innerHTML = '';
+
+    if (!sheetName || !cellReference || !lastcellReference) {
+        statusContainer.innerHTML = "Vui lòng nhập đầy đủ thông tin.";
+        statusContainer.style.backgroundColor = 'red';
+        statusContainer.style.color = 'white';
+        autoHideStatus();
+        return;
     }
 
-    100% {
-        transform: rotate(360deg);
+    // Hiện loader trong lúc chờ
+    updateidlichtruc.classList.add('hidden');
+    loaderupdatelichtruc.classList.remove('hidden');
+
+    // Tạo công thức IMPORTRANGE
+    var formula = '=IMPORTRANGE("1s2a2QqSHId1XKQTW2dSoBcQ-aBNBiF54VtNKMMZ_ADQ", "\'' + sheetName + '\'!' + cellReference + '\:' + lastcellReference + '")';
+
+    // URL script đã cung cấp
+    var scriptURL = 'https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec';
+
+    var data = {
+        action: 'editA1-trong-lich-truc-copy',
+        value: formula
+    };
+
+    // Gửi POST request đến Google Apps Script
+    fetch(scriptURL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams(data).toString()
+    })
+        .then(response => response.text())
+        .then(data => {
+            refreshLichTruc();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Hiển thị thông báo khi gặp lỗi
+            statusContainer.innerHTML = "Đã có lỗi xảy ra: " + error.message + "";
+            statusContainer.style.backgroundColor = 'red';
+            statusContainer.style.color = 'white';
+            autoHideStatus();
+        })
+        .finally(() => {
+            // Ẩn loader sau khi hoàn thành hoặc gặp lỗi
+            loaderupdatelichtruc.classList.add('hidden');
+            updateidlichtruc.classList.remove('hidden');
+        });
+
+    // Hàm tự động ẩn thông báo sau 3 giây
+    function autoHideStatus() {
+        setTimeout(function () {
+            statusContainer.innerHTML = "";
+            statusContainer.style.backgroundColor = '';
+            statusContainer.style.color = '';
+
+        }, 3000); // Ẩn sau 3 giây
     }
+});
+
+
+
+// Hiển thị Lịch trực cuối tuần
+fetch('https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=getLichTrucCopy', {
+    method: 'GET',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+})
+    .then(response => response.json()) // Dữ liệu trả về sẽ là JSON
+    .then(data => {
+        // Tạo bảng từ dữ liệu
+        var table = '<table border="1" cellpadding="5" cellspacing="0">';
+
+        // Tạo tiêu đề bảng (dòng đầu tiên là tiêu đề cột)
+        table += '<thead style="z-index:10;"><tr>';
+        if (data.length > 0) {
+            for (var i = 0; i < data[0].length; i++) {
+                if (i === 0) {
+                    table += '<th>' + data[0][i] + '</th>';
+                } else {
+                    table += '<th><div style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 10px"><div class="white-delete-icon"></div><span>' + data[0][i] + '</span></div></th>';
+                }
+            }
+            table += '</tr></thead>';
+        }
+
+        // Tạo nội dung bảng
+        table += '<tbody>';
+        for (var i = 1; i < data.length; i++) {
+            table += '<tr>';
+            for (var j = 0; j < data[i].length; j++) {
+                if (j === 0) {
+                    table += '<td style="padding: 0; margin: 0;"><div style="display: flex; align-items: center; justify-content: space-between;"><div class="white-delete-icon"></div><span style="flex: 1;">' + data[i][j] + '</span></div></td>';
+                } else {
+                    table += '<td>' + data[i][j] + '</td>';
+                }
+            }
+            table += '</tr>';
+        }
+        table += '</tbody>';
+
+        table += '</table>';
+
+        // Hiển thị bảng trong div
+        document.getElementById('lich-truc-cuoi-tuan-view').innerHTML = table;
+
+        // Thêm chức năng cho các white-delete-icon
+        addDeleteIconFunctions();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('lich-truc-cuoi-tuan-view').innerHTML = 'Lỗi khi tải dữ liệu.';
+    });
+
+function addDeleteIconFunctions() {
+    // Gắn data-index cho các th
+    document.querySelectorAll('thead th').forEach((th, index) => {
+        th.setAttribute('data-index', index);
+    });
+
+    // Ẩn cột khi click white-delete-icon trong <th>
+    const thIcons = document.querySelectorAll('thead .white-delete-icon');
+    thIcons.forEach(icon => {
+        icon.addEventListener('click', () => {
+            const th = icon.closest('th');
+            const colIndex = th.getAttribute('data-index'); // Lấy chỉ số cột từ data-index
+
+            // Ẩn cột <th>
+            th.style.display = 'none';
+
+            // Ẩn tất cả <td> trong cột tương ứng
+            document.querySelectorAll(`tbody tr`).forEach(row => {
+                const td = row.querySelectorAll('td')[colIndex];
+                if (td) td.style.display = 'none';
+            });
+        });
+    });
+
+    // Ẩn hàng khi click white-delete-icon trong <td>
+    const tdIcons = document.querySelectorAll('tbody .white-delete-icon');
+    tdIcons.forEach(icon => {
+        icon.addEventListener('click', () => {
+            const tr = icon.closest('tr');
+            if (tr) tr.style.display = 'none'; // Ẩn hàng
+        });
+    });
 }
 
-.loader-if-remember-login {
-    width: 100vw;
-    height: 100vh;
-    position: absolute;
-    display: grid;
-    place-items: center;
-    background-color: rgba(0, 0, 0, 0.5);
-}
+// Nút Show All
+document.getElementById('Show-all-in-lichtruc-container').addEventListener('click', function () {
+    // Hiện tất cả các cột và hàng trong bảng
+    document.querySelectorAll('thead th').forEach(th => {
+        th.style.display = 'table-cell'; // Hiện cột tiêu đề
+    });
 
-.after-login-container {
-    display: none;
-    width: 100vw;
-    height: 100vh;
-    position: absolute;
-    margin: 0;
-    padding: 0;
-}
+    document.querySelectorAll('tbody td').forEach(row => {
+        row.style.display = 'table-cell'; // Hiện các hàng trong bảng
+    });
 
-#logoutButton,
-#edit-user-infomation,
-#save-user-infomation,
-#cancel-user-infomation {
-    margin-top: 15px;
-    height: auto;
-    width: 100%;
-    cursor: pointer;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    background-color: rgba(var(--colorgrayrgb), 0.2);
-    font-weight: bold;
-    border-radius: 5px;
-    padding: 5px;
-    box-sizing: border-box;
-}
-
-#logoutButton {
-    margin-top: 0px;
-}
-
-#logoutButton,
-#edit-user-infomation {
-    display: flex;
-}
-
-#save-user-infomation,
-#cancel-user-infomation {
-    display: none;
-}
-
-#logoutButton:hover,
-#edit-user-infomation:hover,
-#save-user-infomation:hover,
-#cancel-user-infomation:hover {
-    background-color: rgba(var(--colorgrayrgb), 0.5);
-}
-
-iframe#webtool2 {
-    width: calc(100vw - 80px);
-    height: 100vh;
-    box-sizing: border-box;
-    border: none;
-    padding: 0;
-    margin: 0;
-    user-select: all;
-    pointer-events: all;
-    z-index: 100000;
-}
-
-#iframwebtool2-container {
-    display: none;
-}
-
-.right-tools {
-    width: 100vw;
-    height: 100vh;
-    position: absolute;
-    display: flex;
-    flex-direction: row-reverse;
-    user-select: none;
-    pointer-events: none;
-}
-
-.right-tools-container {
-    background-image: url('image/background/yellow-sky.png');
-    background-size: cover;
-    /* Điều chỉnh kích thước hình nền để bao phủ toàn bộ phần tử */
-    background-position: center;
-    /* Căn giữa hình nền */
-    background-repeat: no-repeat;
-    height: 100%;
-    width: 50px;
-    transition: 0.3s all;
-    margin: 0;
-    padding: 0;
-    isolation: isolate;
-    gap: 20px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    user-select: auto;
-    pointer-events: all;
-    overflow-x: hidden;
-}
-
-.right-tools-container::-webkit-scrollbar {
-    width: 0;
-}
-
-.right-tools-container:hover {
-    width: 80px;
-}
-
-.right-tools-container>:first-child,
-.right-tools-container>:last-child {
-    position: sticky;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-evenly;
-    align-items: center;
-    text-align: center;
-    color: black;
-    transition: 0.3s all;
-}
-
-.right-tools-container>:first-child {
-    margin-bottom: 0;
-    top: 0;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    height: 100px;
-    background-color: #fffdd0;
-}
+    document.querySelectorAll('tbody tr').forEach(row => {
+        row.style.display = 'table-row'; // Hiện các hàng trong bảng
+    });
 
 
-.right-tools-container>:last-child {
-    margin: 0;
-    bottom: 0;
-    box-shadow: 4px -8px 8px rgba(0, 0, 0, 0.3);
-    display: flex;
-    height: 80px;
-    background-image: url('image/background/yellow-sky.png');
-    background-size: 1000%;
-    background-position: left bottom;
-    background-repeat: no-repeat;
-}
+    var statusContainer = document.getElementById('status-of-updating-lichtruc-container');
+    statusContainer.innerHTML = "Đã hiện tất cả";
+    statusContainer.style.backgroundColor = 'green';
+    statusContainer.style.color = 'white';
+    setTimeout(function () {
+        statusContainer.innerHTML = "";
+        statusContainer.style.backgroundColor = '';
+        statusContainer.style.color = '';
+    }, 3000);
+});
 
-.right-tools-container>:nth-child(2) {
-    margin-top: 20px;
-}
 
-.right-tools-container> :not(:first-child):not(:last-child) {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: 0.3s all;
-}
 
-.ToolBar::after {
-    content: "Tools";
-}
+// Nút refresh
+function refreshLichTruc() {
+    const targetView = document.getElementById('lich-truc-cuoi-tuan-view');
+    const statusContainer = document.getElementById('status-of-updating-lichtruc-container');
+    const loaderlichtruc = document.getElementById('loader-lichtruc');
 
-.right-tools-container:hover .ToolBar::after {
-    content: "ToolBar"
-}
+    // Hiển thị loader & xóa nội dung cũ trước khi fetch
+    loaderlichtruc.classList.remove('hidden');
+    targetView.innerHTML = ""; 
 
-.ToolBar,
-.ToolBar::after,
-.right-tools-container:hover .ToolBar::after {
-    font-weight: bold;
-    font-size: 1rem;
-    margin: 0;
-    padding: 0;
-}
+    console.log("🔄 Đang tải dữ liệu...");
 
-.a-tool-box {
-    width: 100%;
-    aspect-ratio: 1/1;
-    background-color: transparent;
-    box-sizing: border-box;
-    padding: 5%;
-    margin: 0;
-    margin-bottom: 50px;
-    user-select: auto;
-    pointer-events: all;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+    // Gọi fetch dữ liệu từ Google Apps Script
+    fetch('https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=getLichTrucCopy', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("✅ Dữ liệu đã nhận:", data);
 
-.a-tool-box>* {
-    width: 100%
-}
+            // Kiểm tra nếu dữ liệu rỗng
+            if (!data || data.length === 0) {
+                targetView.innerHTML = "<p>Không có dữ liệu.</p>";
+                return;
+            }
 
-.right-tools-background {
-    width: 100%;
-    height: 100%;
-    user-select: none;
-    pointer-events: none;
-    position: absolute;
-    z-index: 10;
-}
+            // Tạo bảng từ dữ liệu
+            let table = '<table border="1" cellpadding="5" cellspacing="0">';
 
-.Converter_time_container,
-.Tools-Container {
-    font-size: 1rem;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-radius: 15px;
-    border: 3px solid var(--colorblue);
-    box-shadow: rgb(var(--colorlightbluergb), 0.7) 0 0 10px, rgb(var(--colorlightbluergb), 0.7) 0 0 20px;
-    color: var(--colorblack);
-    background-color: var(--colorwhite);
-    user-select: none;
-    pointer-events: all;
-    padding: 20px;
-    position: absolute;
-    min-width: 96.5vw;
-    height: 87vh;
-    transform: translate(-50%, calc(-50% + 27.5px));
-    left: 50%;
-    top: 50%;
-}
+            table += '<thead style="z-index:10;"><tr>';
+            for (let i = 0; i < data[0].length; i++) {
+                if (i === 0) {
+                    table += `<th>${data[0][i]}</th>`;
+                } else {
+                    table += `<th><div style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 10px"><div class="white-delete-icon"></div><span>${data[0][i]}</span></div></th>`;
+                }
+            }
+            table += '</tr></thead>';
 
-#More-Document_container,
-#Annoucements_container {
-    overflow: hidden;
-    gap: 10px;
-}
+            table += '<tbody>';
+            for (let i = 1; i < data.length; i++) {
+                table += '<tr>';
+                for (let j = 0; j < data[i].length; j++) {
+                    if (j === 0) {
+                        table += `<td style="padding: 0; margin: 0;"><div style="display: flex; align-items: center; justify-content: space-between;"><div class="white-delete-icon"></div><span style="flex: 1;">${data[i][j]}</span></div></td>`;
+                    } else {
+                        table += `<td>${data[i][j]}</td>`;
+                    }
+                }
+                table += '</tr>';
+            }
+            table += '</tbody>';
+            table += '</table>';
 
-#lichtruccuoituan_container {
-    overflow: hidden;
-    justify-content: start;
-    gap: 15px;
-}
+            // Cập nhật giao diện
+            targetView.innerHTML = table;
 
-#Now-hour-time-in-store,
-#Now-minute-time-in-store,
-#store-am-pm,
-#hour-time-they-choose,
-#minute-time-they-choose,
-#customer-am-pm {
-    width: 30px;
-    height: 25px;
-    text-align: center;
-    font-size: 0.8rem;
-    appearance: none;
+            addDeleteIconFunctions();
+        })
+        .catch(error => {
+            console.error("❌ Lỗi khi tải dữ liệu:", error);
+            targetView.innerHTML = `<p style="color: red;">Lỗi khi tải dữ liệu: ${error.message}</p>`;
+        })
+        .finally(() => {
+            // Ẩn loader khi hoàn tất
+            loaderlichtruc.classList.add('hidden');
 
-    box-sizing: border-box;
-    border: 1px solid black;
-    border-radius: 7px;
-}
+            // Hiển thị thông báo cập nhật thành công
+            statusContainer.innerHTML = "Đã cập nhật xong";
+            statusContainer.style.backgroundColor = 'green';
+            statusContainer.style.color = 'white';
 
-.Converter_time_container input:focus,
-.Converter_time_container select:focus {
-    outline: none;
-}
-
-.son_of_Converter_time_container {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    min-height: 40px;
-}
-
-.time_container {
-    width: auto;
-    height: auto;
-}
-
-.Converter_time_container_subject,
-.My_To-Do-List_subject,
-.Calculator_container_subject,
-.lichtruccuoituan_container_subject,
-.Onboard_container_subject,
-.More-Document_container_subject,
-.Annoucements_container_subject {
-    text-align: center;
-    font-weight: bold;
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-    border-bottom: 3px solid var(--colorblack);
+            // Tự động ẩn thông báo sau 3 giây
+            setTimeout(() => {
+                statusContainer.innerHTML = "";
+                statusContainer.style.backgroundColor = '';
+                statusContainer.style.color = '';    
+            }, 3000);
+        });
 }
 
 
-.My_To-Do-List_content {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    overflow-y: auto;
-    padding: 5px 5px 0px 5px;
+
+
+
+
+
+function fetchSMSData() {
+    const url = 'https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=getSMSData'; // Updated URL
+    const params = {}; // No need to pass action in params since it's already in the URL
+
+    // Gửi yêu cầu GET tới backend
+    fetch(url, {
+        method: 'GET',  // Changed method to GET
+    })
+        .then(response => response.json())  // Chuyển dữ liệu từ JSON
+        .then(data => renderSMSData(data))  // Xử lý và hiển thị dữ liệu
+        .catch(error => console.error('Error fetching data:', error));
 }
 
 
-.My_To-Do-List_content>span {
-    user-select: text;
-}
+fetchSMSData();
 
+function renderSMSData(data) {
+    const container = document.getElementById('fetchSMSFromManagers');
 
-.My_To-Do-List_content>span>*>*>:nth-child(2) {
-    line-height: 2;
-    width: 390px !important;
-    padding-inline: 1px;
-    padding-right: 0;
-    box-sizing: border-box;
-    display: inline-block;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    white-space: normal;
-}
-
-#must-to-do-list-container,
-#my-To-do-list-personal-fetch-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 100%;
-}
-
-#must-to-do-list-container {
-    margin-top: 15px;
-}
-
-#must-to-do-list-container>*,
-#my-To-do-list-personal-fetch-container>* {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    min-height: 33px;
-    line-height: 2rem;
-}
-
-div#b4-To-do-list-content {
-    width: auto;
-    height: 45px;
-    padding: 0;
-    margin: 15px 0 0 0;
-    background: var(--background-color);
-    display: flex;
-    align-items: center;
-    border-radius: 5px;
-    border: 1px solid black;
-    /* position: absolute;
-    bottom: 10px; */
-}
-
-.To-Do-Line-item {
-    padding: 5px 0px 5px 0px;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    background-color: rgba(var(--gray-background-color), 0.7);
-    color: var(--colorblack);
-    border-radius: 5px;
-}
-
-.smalldiv {
-    width: 20px;
-    height: auto;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: end;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.charCountDiv {
-    margin: 0;
-    padding: 0 2px 0 0;
-    font-size: 0.65rem;
-    line-height: 1;
-    height: auto;
-    width: 48px;
-    color: #555;
-    user-select: none;
-    pointer-events: none;
-    -webkit-user-select: none;
-    text-align: right;
-    display: none;
-    bottom: 0;
-    right: 20px;
-    position: absolute;
-}
-
-/* Đỏ là quan trọng
-Cam là quá ngày
-Vàng gold là tới ngày hôm nay
-Xanh lá cây là chỉnh sửa */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-
-.To-Do-toi-ngay-hom-nay,
-.To-Do-qua-ngay,
-.To-Do-Quan-Trong,
-.To-Do-Chinh-Sua,
-.To-Do-CountDown-to-Delete {
-    background-size: 5px 5px;
-    background-position: -5px -5px;
-    position: relative;
-    overflow: visible;
-    border-radius: 5px;
-}
-
-.To-Do-toi-ngay-hom-nay {
-    background-color: #4fc2e9;
-    color: black;
-}
-
-.To-Do-qua-ngay {
-    background-color: #FFA500;
-    color: black;
-}
-
-.To-Do-Quan-Trong {
-    background-color: #ff1515;
-    ;
-    color: white;
-    font-weight: bold;
-}
-
-.To-Do-Chinh-Sua {
-    background-color: #32af01;
-    color: black;
-}
-
-.To-Do-Quan-Trong::before {
-    content: "IMPORTANT";
-    color: red;
-    border-color: red;
-}
-
-.To-Do-toi-ngay-hom-nay::before {
-    content: "TODAY";
-    color: #4fc2e9;
-    border-color: #4fc2e9;
-}
-
-.To-Do-qua-ngay::before {
-    content: "LATE";
-    color: #FFA500;
-    border-color: #FFA500;
-}
-
-.To-Do-Chinh-Sua::before {
-    content: "EDITING";
-    color: #32af01;
-    border-color: #32af01;
-}
-
-.To-Do-toi-ngay-hom-nay::before,
-.To-Do-qua-ngay::before,
-.To-Do-Quan-Trong::before,
-.To-Do-Chinh-Sua::before {
-    position: absolute;
-    top: 0;
-    right: 20%;
-    transform: translate(50%, -50%);
-    font-size: 0.75rem;
-    font-weight: bold;
-    pointer-events: none;
-    width: auto;
-    height: auto;
-    line-height: 1;
-    border: 1px solid;
-    padding: 1px 2px 0px 2px;
-    border-radius: 4px;
-    background: var(--background-color);
-    box-shadow: 0 0 0 4px var(--background-color);
-}
-
-.To-Do-CountDown-to-Delete {
-    position: relative;
-    animation: fadeout 0.6s ease-in 14s;
-}
-
-.To-Do-CountDown-to-Delete::after {
-    position: absolute;
-    content: "";
-    height: 100%;
-    width: 0%;
-    background: #0077ffcb;
-    animation: run-right-to-left 14s linear, big-small 1s linear 14s;
-    border-radius: 5px;
-    right: 0;
-    top: 0;
-}
-
-@keyframes run-right-to-left {
-    0% {
-        width: 0%;
+    // Hàm để gom nhóm dữ liệu theo cột A
+    function groupBy(data, columnIndex) {
+        return data.reduce((groups, item) => {
+            const key = item[columnIndex];
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(item);
+            return groups;
+        }, {});
     }
 
-    100% {
-        width: 100%;
+    // Hàm để chuyển đổi ký tự có dấu thành không dấu
+    function removeAccents(str) {
+        var accents = 'ÀÁÂÃĂẠẢẤẦẨẪẬẮẰẲẴẶàáâãăạảấầẩẫậắằẳẵặĐđÝỲỴỶỸýỳỵỷỹÌÍĨỈỊìíĩỉịÙÚŨƯỤỦỨỪỬỮỰùúũưụủứừửữựÒÓÔÕƠỌỎỐỒỔỖỘỚỜỞỠỢòóôõơọỏốồổỗộớờởỡợÈÉÊẸẺẼẾỀỂỄỆèéêẹẻẽếềểễệ';
+        var accentsOut = 'AAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaDdYYYYYyyyyyIIIIIiiiiiUUUUUUUUUUUuuuuuuuuuuuOOOOOOOOOOOOOOOOOoooooooooooooooooEEEEEEEEEEEeeeeeeeeeee';
+
+        return str.split('').map(function (char) {
+            var index = accents.indexOf(char);
+            return index !== -1 ? accentsOut.charAt(index) : char;
+        }).join('');
+    }
+
+    // Sắp xếp dữ liệu theo cột A để gom nhóm
+    const groupedData = groupBy(data, 1); // Sắp xếp theo cột A (index 0)
+
+    // Tạo nhóm DOM
+    for (const group in groupedData) {
+        const columnB = document.createElement('div');
+        columnB.classList.add('columnB'); // Thêm lớp cho nhóm
+        columnB.setAttribute('data-group-title', group);
+
+        const columngroupC = document.createElement('div');
+        columngroupC.classList.add('columngroupC');
+
+        let createdInput = false; // Cờ để kiểm tra xem đã tạo input chưa
+
+        // Thêm các cột B và C tương ứng dưới cột A
+        groupedData[group].forEach(item => {
+            const columnC = document.createElement('div');
+            columnC.classList.add('columnC');
+            columnC.innerText = item[2]; // Cột B (index 1)
+
+            // Thay đổi columnD thành <span> thay vì <div>
+            const columnD = document.createElement('span');
+            columnD.classList.add('columnD');
+            columnD.style.display = 'none';
+            columnD.innerText = item[3]; // Cột C (index 2)
+            columnD.setAttribute('data-original', item[3]);
+
+            // Gắn sự kiện click để copy nội dung columnD
+            columnC.addEventListener('click', () => {
+                const originalText = columnC.innerText; // Lưu nội dung ban đầu
+                const contentToCopy = columnD.innerHTML.replace(/<br\s*\/?>/gi, '\n').trim();
+
+                navigator.clipboard.writeText(contentToCopy).then(() => {
+                    columnC.innerText = 'Copied'; // Đổi nội dung thành "Copied"
+                    columnC.style.color = 'red';
+                    columnC.style.backgroundColor = 'yellow';
+                    // Sau 3 giây, khôi phục nội dung ban đầu
+                    setTimeout(() => {
+                        columnC.innerText = originalText;
+                        columnC.style.color = '';
+                        columnC.style.backgroundColor = '';
+                    }, 3000); // 3000 ms = 3 giây
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+
+
+
+            // Nếu item[0] bằng "Có" và chưa tạo input, tạo 1 input cho nhóm này
+            if (item[0] === "Có" && !createdInput) {
+                const inputField = document.createElement('input');
+                inputField.type = 'text';
+                inputField.placeholder = 'Your Name';
+                inputField.classList.add('columnA'); // Thêm lớp CSS nếu cần
+                columnB.appendChild(inputField);
+                createdInput = true; // Đánh dấu đã tạo input cho nhóm này
+
+                // Gắn sự kiện cho inputField
+                inputField.addEventListener('input', function () {
+                    let value = inputField.value;
+
+                    // Chuyển đổi value thành không dấu
+                    let value2 = removeAccents(value);
+
+                    // Lặp qua tất cả các columnD trong nhóm và cập nhật nội dung
+                    columngroupC.querySelectorAll('.columnD').forEach(columnD => {
+                        let originalText = columnD.getAttribute('data-original'); // Lấy giá trị gốc
+                        columnD.innerText = originalText.replace('***', value).replace('---', value2);
+                    });
+                });
+            }
+
+            columnC.appendChild(columnD);
+            columngroupC.appendChild(columnC);
+        });
+
+        columnB.appendChild(columngroupC);
+
+        // Thêm nhóm vào container
+        container.appendChild(columnB);
     }
 }
 
-@keyframes big-small {
-    0% {
-        height: 100%;
-        width: 100%;
-        transform: translate(-50%, -50%);
-        left: 50%;
-        top: 50%;
-    }
 
-    100% {
-        height: 0%;
-        width: 100%;
-        transform: translate(-50%, -50%);
-        left: 50%;
-        top: 50%;
-    }
-}
 
-@keyframes fadeout {
-    0% {
-        opacity: 1;
-    }
+fetchAndDisplayCheckIDInformation();
 
-    90% {
-        opacity: 0;
-    }
 
-    100% {
-        opacity: 0;
+async function fetchAndDisplayCheckIDInformation() {
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=CheckIDInformation'; // Updated URL
+
+    try {
+        const response = await fetch(scriptURL, {
+            method: 'GET',  // Changed method to GET since action is part of the URL
+        });
+
+        const result = await response.json();
+
+        // Pass the fetched result to the createLinks function
+        createLinks(result);
+
+    } catch (error) {
+        console.error('Error fetching data:', error);
     }
 }
 
-#nguyen-nhan-chan-edit {
-    visibility: hidden;
-    position: absolute;
-    color: white;
-    right: 60px;
-    top: 10px;
-    max-width: 180px;
-    height: 20px;
-    background-color: #32af01;
-    padding: 5px;
-    border-radius: 5px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transform: translateX(0);
-    box-shadow:
-        0 0 5px rgba(50, 175, 1, 0.5),
-        0 0 10px rgba(50, 175, 1, 0.5),
-        0 0 15px rgba(50, 175, 1, 0.5),
-        0 0 20px rgba(50, 175, 1, 0.5);
-    animation: glow 1s ease-in-out infinite;
-}
-
-@keyframes glow {
-    0% {
-        box-shadow:
-            0 0 5px rgba(50, 175, 1, 0.5),
-            0 0 10px rgba(50, 175, 1, 0.5),
-            0 0 15px rgba(50, 175, 1, 0.5),
-            0 0 20px rgba(50, 175, 1, 0.5);
-    }
-
-    50% {
-        box-shadow:
-            0 0 8px rgba(50, 175, 1, 1),
-            0 0 15px rgba(50, 175, 1, 0.9),
-            0 0 20px rgba(50, 175, 1, 0.8),
-            0 0 25px rgba(50, 175, 1, 0.8);
-    }
-
-    100% {
-        box-shadow:
-            0 0 5px rgba(50, 175, 1, 0.5),
-            0 0 10px rgba(50, 175, 1, 0.5),
-            0 0 15px rgba(50, 175, 1, 0.5),
-            0 0 20px rgba(50, 175, 1, 0.5);
-    }
-}
-
-.reminder-button-container {
-    width: 120px;
-    height: 60px;
-    display: none;
-    color: black;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    background-color: rgb(255, 196, 87);
-    border: 1px solid var(--colorblack);
-    border-radius: 5px;
-    position: absolute;
-    right: 30px;
-    top: 0;
-    padding: 5px;
-    margin: 0;
-    transform: translate(0, -30%);
-    font-size: 0.8rem;
-    box-shadow: 4px 4px 0 rgba(var(--gray-background-color), 0.9);
-}
-
-.reminder-button-container>* {
-    height: 20px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.reminder-button-container input {
-    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-    font-size: 0.75rem;
-    text-align: center;
-}
-
-.reminder-button-container>:first-child {
-    height: 12px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    line-height: 1;
-    font-weight: bold;
-    user-select: none;
-    pointer-events: none;
-    -webkit-user-select: none;
-}
-
-.HopChuacacNut {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.NutCaiReminder,
-.NutHuyReminder,
-.NutTroLai {
-    width: 57.5px;
-    height: 20px;
-    background-color: orangered;
-    box-sizing: border-box;
-    border-radius: 10px;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 2px 2px 0 black;
-}
-
-.NutTroLai {
-    display: flex;
-}
-
-.NutCaiReminder,
-.NutHuyReminder {
-    display: none;
-}
-
-.NutCaiReminder::after {
-    content: "Set";
-}
-
-.NutHuyReminder::after {
-    content: "Cancel";
-}
-
-.NutTroLai::after {
-    content: "Back";
-}
-
-.Muiten {
-    position: absolute;
-    width: 0;
-    height: 0;
-    border-top: 10px solid transparent;
-    border-left: 10px solid orangered;
-    border-bottom: 10px solid transparent;
-    z-index: 1;
-    right: 0%;
-    top: 0%;
-    transform: translate(130%, 100%);
-}
-
-
-div#Current-Number-of-To-do-list {
-    margin-block: 10px;
-    width: 100%;
-    text-align: right;
-    font-weight: bold;
-}
-
-#Add-To-do-list-content {
-    color: var(--colorblack) !important;
-    background-color: var(--colorwhite);
-    display: block;
-    align-items: center;
-    justify-content: start;
-    border: none !important;
-    min-height: 2rem;
-    width: 460px;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-    overflow-x: hidden;
-    overflow-y: hidden;
-    outline: none;
-    box-sizing: border-box;
-    resize: none;
-}
-
-.To-do-list_checkbox {
-    background-color: transparent;
-    outline: none;
-    transform: scale(1.2);
-    padding-inline: 2px;
-    box-sizing: border-box;
-}
-
-.b4smalldiv_in_MyToDoList {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-}
-
-.movearea {
-    width: 100%;
-    height: 15px;
-    background-color: yellow;
-    position: absolute;
-    top: 0;
-    left: 0;
-    border-radius: 12px 12px 0 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-sizing: border-box;
-    cursor: move;
-}
-
-.movearea::before,
-.movearea::after {
-    content: "";
-    height: 3px;
-    margin: 0;
-    background-color: transparent;
-}
-
-.movearea::before {
-    width: calc(100% - 18px);
-    margin-top: 2.5px;
-    border-top: 1px solid black;
-}
-
-.movearea::after {
-    width: calc(100% - 8px);
-    border-top: 1px solid black;
-    border-bottom: 1px solid black;
-}
-
-#calculator {
-    width: 300px;
-    height: 300px;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    user-select: none;
-    box-sizing: border-box;
-}
-
-.input_calculator {
-    width: 100%;
-    height: 40px;
-    text-align: right;
-    font-size: 1.5rem;
-    padding: 5px;
-    border: 4px solid orangered;
-    background-color: white;
-    color: black;
-    box-sizing: border-box;
-    border-radius: 10px;
-}
-
-.input_calculator:focus {
-    outline: none
-}
-
-.error-message {
-    color: red;
-    text-align: right;
-    min-height: 30px;
-}
-
-.calculator-sign-and-number-big-container {
-    width: 100%;
-    display: flex;
-    gap: 2px;
-    justify-content: center;
-    align-items: start;
-}
-
-.calculator-sign-and-number-small-container {
-    width: 100%;
-    display: flex;
-    gap: 2px;
-    flex-direction: column;
-}
-
-.calculator-sign-and-number-small-container>div {
-    display: flex;
-    flex-direction: row;
-    gap: 2px;
-}
-
-.calculator-sign-and-number-small-container>button,
-.calculator-sign-and-number-small-container>*>button {
-    width: 100%;
-    height: 40px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    box-sizing: border-box;
-    background-color: orange;
-    box-shadow: 0 2px 2px black;
-    transition: 0.1s all;
-}
-
-.calculator-sign-and-number-small-container>button:active,
-.calculator-sign-and-number-small-container>*>button:active {
-    transform: translate(0, 5px);
-    box-shadow: none;
-}
-
-.calculation_sign {
-    background-color: orangered !important
-}
-
-#history-of-calculator {
-    width: 100%;
-    aspect-ratio: 2/1;
-    padding: 0.3vw;
-    border-radius: 0.5vw;
-    border: 0.2vw solid orange;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
-    color: black;
-    user-select: none;
-    box-sizing: border-box;
-    font-size: 1.5vw;
-    overflow-x: scroll;
-    overflow-y: scroll;
-    text-align: left;
-    text-wrap: wrap;
-}
-
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: wheat;
-    border-radius: 1vw;
-    /* Background of the scrollbar track */
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: orangered;
-    /* Color of the scrollbar thumb */
-    border-radius: 1vw;
-    /* Roundness of the scrollbar thumb */
-}
-
-.Chinh-sua-cap-nhat-lichtruccuoituan {
-    display: flex;
-    width: 310px;
-    height: auto;
-    gap: 10px;
-}
-
-
-#sua-o-cuoi-cung-trong-sheet,
-#sua-o-dau-tien-trong-sheet,
-#sua-ten-sheet,
-#updateA1Btn,
-#refresh-lichtruc {
-    width: 70px;
-    height: 2rem;
-    background-color: var(--colorblue);
-    border-radius: 10px;
-    padding: 8px;
-    box-sizing: border-box;
-    border: none;
-    outline: none;
-    color: white;
-    text-align: left;
-}
-
-#sua-ten-sheet {
-    width: 100px;
-}
-
-#updateA1Btn,
-#refresh-lichtruc {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    width: 60px;
-    font-size: 0.8rem;
-    box-shadow: 5px 5px 0 orangered;
-    transform: translate(-5px, -5px);
-    border: 1px solid var(--colorblack);
-}
-
-#updateA1Btn:hover,
-#refresh-lichtruc:hover {
-    color: red;
-    box-shadow: 5px 5px 0 red;
-    transition: 0.3s all;
-}
-
-#updateA1Btn:active,
-#refresh-lichtruc:active {
-    box-shadow: 0 0 0 red;
-    transform: translate(0, 0);
-    transition: 0.2s all;
-}
-
-#sua-ten-sheet::placeholder,
-#sua-o-cuoi-cung-trong-sheet::placeholder,
-#sua-o-dau-tien-trong-sheet::placeholder {
-    font-size: 0.7rem;
-    text-align: center;
-}
-
-#status-of-updating-lichtruc-container {
-    width: auto;
-    min-width: 100px;
-    max-width: 100%;
-    height: 2rem;
-    font-size: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-sizing: border-box;
-    padding-inline: 5px;
-}
-
-#lich-truc-cuoi-tuan-view {
-    max-width: 97.5vw;
-    max-height: 80vh;
-    /* width: 500px;
-    height: 500px; */
-    overflow: auto;
-    align-items: center;
-}
-
-#lich-truc-cuoi-tuan-view * {
-    font-size: 1rem;
-}
-
-#lich-truc-cuoi-tuan-view>table {
-    table-layout: fixed;
-    border-collapse: collapse;
-    width: auto;
-    height: auto;
-}
-
-
-#lich-truc-cuoi-tuan-view>table>*>*>th,
-#lich-truc-cuoi-tuan-view>table>*>*>td:is(:first-child) {
-    border: 1px solid var(--colorblack);
-    text-align: center;
-    word-wrap: break-word;
-}
-
-#lich-truc-cuoi-tuan-view>table>*>*>td:not(:first-child) {
-    font-size: 0.85em;
-    border: 1px solid var(--colorblack);
-    text-align: center;
-    word-wrap: break-word;
-}
-
-#lich-truc-cuoi-tuan-view>table>*>tr:nth-child(odd) >td {
-    background-color: rgb(200, 200, 200);
-    height: 2.5rem;
-}
 
-#lich-truc-cuoi-tuan-view>table>*>tr:nth-child(even) >td {
-    background-color: #ffffff;
-    height: 2.5rem;
-}
-
-#lich-truc-cuoi-tuan-view th {
-    height: 4rem;
-}
-
-#lich-truc-cuoi-tuan-view>table>thead,
-#lich-truc-cuoi-tuan-view>table>thead>*>th {
-    background-color: var(--colorblue);
-    color: white;
-    position: sticky;
-    top: 0;
-    border: 1px solid var(--colorblack);
-    padding: 2px;
-    padding-top: 5px;
-}
-
-#lich-truc-cuoi-tuan-view>table th:is(:first-child),
-#lich-truc-cuoi-tuan-view>table td:is(:first-child) {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-}
-
-#lich-truc-cuoi-tuan-view>table>*>*>th,
-#lich-truc-cuoi-tuan-view>table>*>*>td {
-    min-width: 9vw;
-    max-width: 9vw;
-}
-
-#main-container {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    margin: 0;
-}
-
-#header-main-container {
-    width: 100%;
-    height: auto;
-    box-sizing: border-box;
-    padding-inline: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--colorwhite);
-    box-shadow: 0px 10px 10px black;
-    z-index: 1000;
-}
-
-#header-main-container>* {
-    height: 6vh;
-    min-width: 6vh;
-    box-sizing: border-box;
-    padding: 10px;
-    color: var(--colorblack);
-    display: flex;
-    align-items: center;
-    user-select: none;
-    -webkit-user-select: none;
-    cursor: pointer;
-    position: relative;
-}
-
-#header-main-container> :first-child {
-    text-align: left;
-    align-items: start;
-    min-width: 195px;
-    width: 195px;
-    word-wrap: break-word;
-    word-break: break-word;
-    display: flex;
-    flex-direction: column;
-    border: 2px solid var(--colorblack);
-    border-radius: 15px;
-    height: 80%;
-}
 
-#header-main-container> :nth-child(2) {
-    height: 100%;
-    aspect-ratio: 1;
-}
-
-#header-main-container label {
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-}
-
-#header-main-container>div>label {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-#header-main-container input[type="checkbox"] {
-    display: none;
-}
-
-#header-main-container input[type="checkbox"]:checked+.header-container {
-    display: flex;
-}
+function createLinks(result) {
+    // Clear existing content
+    const container = document.getElementById('fetch-check-id-information');
+    container.innerHTML = '';
+
+    result.forEach((item, index) => {
+        const name = item[0];  // Name from column A
+        let linkUrl = item[1];  // URL from column B
+
+        console.log("Original Link URL:", linkUrl);
+
+        // Create the <a> element
+        const link = document.createElement('a');
+        link.href = linkUrl;
+        link.classList.add('Open-button');
+        link.textContent = name;
+
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.classList.add('input-checkbox-Open-button');
+
+        // Check localStorage to restore the state of the checkbox
+        const storedState = localStorage.getItem('checkboxState' + index);
+        if (storedState === 'checked') {
+            input.checked = true;
+        } else {
+            input.checked = false;
+        }
+
+        // Add event listener to change localStorage when checkbox state changes
+        input.addEventListener('change', function () {
+            if (input.checked) {
+                localStorage.setItem('checkboxState' + index, 'checked');
+            } else {
+                localStorage.setItem('checkboxState' + index, 'unchecked');
+            }
+        });
+
+        const group = document.createElement('div');
+        group.style.position = 'relative';
+        group.appendChild(link);
+        group.appendChild(input);
+
+        // Add event listener to replace "*****" and open in new tabs
+        link.addEventListener('click', function (event) {
+            // Prevent the default action of opening the link
+            event.preventDefault();
+
+            // Check if the checkbox is checked
+            const isLockChecked = document.getElementById('lock-combo-activate').checked;
+            if (isLockChecked) {
+                // If checked, execute pasteClipboard and updateCheckInfo
+                pasteClipboard().then(() => {
+                    const customValues = document.getElementById('id-of-check-id-information')?.textContent.split(',');
+
+                    if (customValues && customValues.length > 0) {
+                        customValues.forEach(customValue => {
+                            customValue = customValue.trim();
+                            const modifiedLinkUrl = linkUrl.replace('*****', customValue);
+                            console.log("Modified Link URL:", modifiedLinkUrl);
+
+                            // Now open the modified link in a new tab
+                            window.open(modifiedLinkUrl, '_blank');
+                        });
+                    } else {
+                        console.log("No custom values found in span.");
+                        alert("Please enter valid values in the input field.");
+                    }
+                });
+            } else {
+                // If not checked, just proceed with the link click as usual
+                const customValues = document.getElementById('id-of-check-id-information')?.textContent.split(',');
+
+                if (customValues && customValues.length > 0) {
+                    customValues.forEach(customValue => {
+                        customValue = customValue.trim();
+                        const modifiedLinkUrl = linkUrl.replace('*****', customValue);
+                        console.log("Modified Link URL:", modifiedLinkUrl);
+
+                        window.open(modifiedLinkUrl, '_blank');
+                    });
+                } else {
+                    console.log("No custom values found in span.");
+                    alert("Please enter valid values in the input field.");
+                }
+            }
+        });
+
+        container.appendChild(group);
+    });
+}
+
+
+
+fetchAndDisplayGetServer();
+
+let map = {}; // Biến lưu trữ dữ liệu sau khi fetch
+
+async function fetchAndDisplayGetServer() {
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=GetServer'; // Updated URL
 
-#clocks-input:checked+.header-container {
-    display: grid !important;
-}
-
-.classforclocks {
-    transform: translate(-50%, -50%) scale(5) !important;
-    position: fixed !important;
-    left: 50% !important;
-    top: 50% !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px;
-}
-
-#website-title {
-    color: var(--colorblue);
-}
-
+    try {
+        const response = await fetch(scriptURL, {
+            method: 'GET',  // Changed method to GET since action is part of the URL
+        });
 
-.WEB-TOOL-SUPPORTING-CUSTOMER {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-}
-
-.WEB-TOOL-SUPPORTING-CUSTOMER::after {
-    content: 'WEB-TOOL SUPPORTING CUSTOMER';
-    font-size: 2.5rem;
-}
+        const result = await response.json();
 
-@media (max-width: 1350px) {
-    .WEB-TOOL-SUPPORTING-CUSTOMER::after {
-        content: 'WEB-TOOL';
-        font-size: clamp(1rem, 5vw, 2rem);
-    }
+        // Pass the fetched result to the createLinks function
+        createLinksGetServer(result);
 
-    #clock-container {
-        display: none;
+    } catch (error) {
+        console.error('Error fetching data:', error);
     }
 }
 
-.header-container {
-    width: auto;
-    height: auto;
-    padding: 10px;
-    background-color: var(--colorwhite);
-    position: absolute;
-    top: calc(6vh + 10px);
-    left: 50%;
-    display: none;
-    flex-direction: column;
-    animation: opacity 0.3s linear;
-    transform: translateX(-50%);
-    border-radius: 10px;
-    box-shadow: 0 0 5px var(--colorblack);
-    cursor: auto;
+function createLinksGetServer(data) {
+    const dropdown = document.getElementById("dropdown");
+    dropdown.innerHTML = ""; // Clear existing options
+
+    map = {}; // Reset map
+
+    // Add default option
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "Click to choose Server";
+    defaultOption.disabled = true; // Không cho phép chọn lại nếu đã chọn server khác
+    defaultOption.selected = true; // Là tùy chọn mặc định
+    dropdown.appendChild(defaultOption);
+
+    // Add server options from data
+    data.forEach((row, index) => {
+        const [serverName, someValue, serverIDH] = row;
+
+        // Populate the dropdown with server names
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = serverName;
+        dropdown.appendChild(option);
+
+        // Map index to server details
+        map[index] = {
+            name: serverName,
+            someValue: someValue,
+            serverIDH: serverIDH // Cột thứ 3
+        };
+    });
 }
 
-@keyframes opacity {
-    0% {
-        opacity: 0;
+
+fetchAndDisplayGetOtherDocuments();
+
+async function fetchAndDisplayGetOtherDocuments() {
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=GetOtherDocuments'; // Updated URL
+
+    try {
+        const response = await fetch(scriptURL, {
+            method: 'GET',  // Changed method to GET since action is part of the URL
+        });
+
+        const result = await response.json();
+
+        // Pass the fetched result to the createLinks function
+        createLinksGetOtherDocuments(result);
+
+    } catch (error) {
+        console.error('Error fetching data:', error);
     }
+}
 
-    100% {
-        opacity: 1;
+
+function createLinksGetOtherDocuments(data) {
+    // Get the container where the links will be appended
+    const container = document.getElementById('fetch-other-documents'); // Ensure you have an element with this ID in your HTML
+    container.innerHTML = '';
+    data.forEach(row => {
+        const link = document.createElement('a');
+
+        link.textContent = row[0];
+        link.href = row[1];
+        link.target = '_blank';
+        link.classList.add('Open-button');
+        container.appendChild(link);
+    });
+}
+
+fetchAndDisplayDocuments();
+
+async function fetchAndDisplayDocuments() {
+    try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=GetMoreDocuments');
+        const data = await response.json();
+
+        function convertUrlsToLinks(text) {
+            var urlRegex = /(https?:\/\/[^\s<]+)/g;
+            text = text.replace(urlRegex, function (url) {
+                return '<a href="' + url + '" target="_blank">' + url + '</a>';
+            });
+            return text.replace(/\n/g, '<br>');  // Convert line breaks to <br> tags
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+            const container = document.querySelector('#more-document-table');
+            container.innerHTML = '';
+
+            const table = document.createElement('table');
+            const tbody = document.createElement('tbody');
+
+            data.forEach(row => {
+                const tableRow = document.createElement('tr');
+                const titleCell = document.createElement('td');
+                titleCell.innerHTML = convertUrlsToLinks(row[0]);
+                tableRow.appendChild(titleCell);
+
+                const dateCell = document.createElement('td');
+                dateCell.innerHTML = convertUrlsToLinks(row[1]);
+                tableRow.appendChild(dateCell);
+
+                tbody.appendChild(tableRow);
+            });
+
+            table.appendChild(tbody);
+            container.appendChild(table);
+        } else {
+            console.error('Invalid data format');
+        }
+    } catch (error) {
+        console.error('Error fetching documents:', error);
     }
 }
 
-.gap {
-    gap: 10px;
+fetchAndDisplayAnnoucements();
+
+async function fetchAndDisplayAnnoucements() {
+    try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbxy2wam-fhMZKGwB5LrJWTT-sCzpCytwZhUIcjBhmx9SojWSuAwVudAPCRx0CN7488/exec?action=GetAnnoucements');
+        const data = await response.json();
+
+        function convertUrlsToLinks(text) {
+            var urlRegex = /(https?:\/\/[^\s<]+)/g;
+            text = text.replace(urlRegex, function (url) {
+                return '<a href="' + url + '" target="_blank">' + url + '</a>';
+            });
+            return text.replace(/\n/g, '<br>');  // Convert line breaks to <br> tags
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+            const container = document.querySelector('#Annoucements-table');
+            container.innerHTML = '';
+
+            const table = document.createElement('table');
+            const tbody = document.createElement('tbody');
+
+            data.forEach(row => {
+                const tableRow = document.createElement('tr');
+                const titleCell = document.createElement('td');
+                titleCell.innerHTML = convertUrlsToLinks(row[0]);
+                tableRow.appendChild(titleCell);
+
+                tbody.appendChild(tableRow);
+            });
+
+            table.appendChild(tbody);
+            container.appendChild(table);
+        } else {
+            console.error('Invalid data format');
+        }
+    } catch (error) {
+        console.error('Error fetching documents:', error);
+    }
 }
 
-.Open-button {
-    min-width: 100px;
-    min-height: var(--heightOpenButton);
-    background-color: var(--colorwhite);
-    border: 1px solid var(--colorblack);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    font-style: normal;
-    text-decoration: none;
-    color: var(--colorlightblue);
-    cursor: pointer;
-    padding: 10px;
-    box-sizing: border-box;
-    border-radius: 10px;
-    transform: translate(-2px, -2px);
-    box-shadow: 4px 4px 0 orangered;
-    transition: 0.3s all;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-}
-
-.Open-button:active {
-    transform: translate(2px, 2px);
-    box-shadow: 0 0 0 orangered;
-}
-
-.Open-button:hover {
-    background-color: var(--colorblue);
-    color: white;
-}
-
-.special:hover {
-    background-color: orangered;
-    color: white;
-}
-
-.special:hover>span {
-    color: white !important;
-    transition: 0.3s all;
-}
-
-.special:hover rect,
-.special:hover path {
-    stroke: white;
-    transition: 0.3s all;
-}
-
-.Copy-in-Open-button {
-    width: 20px;
-    aspect-ratio: 1;
-    padding: 5px;
-    background-color: var(--colorwhite);
-    border: 1px solid var(--colorblack);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    font-style: normal;
-    text-decoration: none;
-    color: var(--colorlightblue);
-    cursor: pointer;
-    border-radius: 10px;
-    transform: translate(-2px, -2px);
-    box-shadow: 4px 4px 0 orangered;
-    transition: 0.3s all;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-}
-
-.Copy-in-Open-button:active {
-    transform: translate(2px, 2px);
-    box-shadow: 0 0 0 orangered;
-}
-
-.Copy-in-Open-button:hover {
-    background-color: var(--colorblue);
-    color: white;
-}
-
-.combo {
-    background-color: var(--colorlightblue);
-    color: white;
-}
-
-#Find-Customers {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-#Find-Customers * {
-    font-size: 1.2rem;
-    padding: 0;
-    margin: 0;
-    width: 245px;
-    height: 50px;
-    outline: none;
-    box-sizing: border-box;
-    cursor: auto;
-    border-radius: 5px;
-}
-
-#Find-Customers label,
-#Find-Customers label>span {
-    user-select: none;
-    -webkit-user-select: none;
-    pointer-events: none;
-    cursor: none;
-    position: absolute;
-    padding-inline: 15px;
-    margin-inline: 10px;
-    height: auto;
-    width: auto;
-    top: 0;
-    background-color: var(--colorblue);
-    color: white;
-    font-size: 1rem;
-}
-
-#Find-Customers label>span {
-    position: relative;
-    padding-inline: 0;
-    margin-inline: 0;
-}
-
-#Find-Customers input {
-    border: 2px solid;
-    text-align: center;
-    padding: 10px 5px;
-    height: 40px;
-    background-color: var(--colorwhite);
-    color: var(--colorblack);
-    border-color: var(--colorblack);
-}
-
-#Find-Customers button {
-    cursor: pointer;
-}
-
-.small-Find-Customers {
-    position: relative;
-    display: flex;
-    align-items: end;
-}
-
-.middle {
-    left: calc(50vw - 310px);
-}
-
-.transparent {
-    background-color: transparent;
-    border: none;
-    box-shadow: none;
-}
-
-#body-main-container {
-    width: 100%;
-    height: 88%;
-    background-color: var(--colorwhite);
-    color: var(--colorblack);
-    display: flex;
-    flex-direction: column;
-    flex-wrap: wrap;
-    justify-content: start;
-    gap: 10px;
-    padding: 10px;
-    box-sizing: border-box;
-    overflow-y: hidden;
-    overflow-x: auto;
-}
-
-
-#body-main-container>* {
-    width: calc(100%/4 - 10px);
-    max-height: 100%;
-    padding: 10px;
-    gap: 10px;
-    margin: 0;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--colorblue);
-    overflow: hidden;
-    box-shadow: 5px 5px 0 orangered;
-    border-radius: 15px;
-    transition: 0.5s all;
-    position: relative;
-}
-
-
-.brightness100 {
-    filter: brightness(100%) !important;
-}
-
-#footer-main-container {
-    width: 100%;
-    height: 6%;
-    /* height: 60%; */
-    background-color: var(--colorblue);
-    display: flex;
-}
-
-#fetchSMSFromManagers,
-.right-bottom,
-#ChatGPTClass {
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: center;
-}
-
-#fetchSMSFromManagers,
-.right-bottom {
-    width: 100%;
-}
-
-.columnB {
-    min-width: 200px;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    position: relative;
-    cursor: pointer;
-}
-
-.columnB::before {
-    content: attr(data-group-title);
-}
-
-.columnB:hover .columngroupC {
-    display: flex;
-}
-
-.columngroupC {
-    background-color: var(--colorblue);
-    width: 100%;
-    display: none;
-    flex-direction: column;
-    position: absolute;
-    transform: translateY(-100%);
-    top: 0;
-    padding: 10px;
-    box-sizing: border-box;
-    border-radius: 10px 10px 0 0;
-    gap: 10px;
-}
-
-.columnC {
-    width: 100%;
-    min-height: 40px;
-    cursor: url('image/cursor/copy-cursor.svg'), auto;
-    background-color: var(--colorlightblue);
-    box-shadow: 2px 2px 5px black;
-    border-radius: 5px;
-    transition: 0.3s all;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 0px 20px;
-    box-sizing: border-box;
-}
-
-.columnC:active {
-    box-shadow: 0 0 0 black;
-    transform: translate(2px, 2px);
-}
-
-.columnA {
-    width: 80%;
-    outline: none;
-    text-align: center;
-    border-radius: 5px;
-    color: white;
-    background-color: var(--colorlightblue);
-}
-
-#fetch-check-id-information,
-.similarclass {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: 10px 10px 10px 2px;
-}
-
-#fetch-check-id-information>*,
-.similarclass>* {
-    flex: 1 1 calc((100% - 20px) / 2);
-    box-sizing: border-box;
-}
-
-.nhom4>* {
-    flex: 1 1 calc((100% - 30px) / 4);
-    max-width: calc((100% - 30px) / 4) !important;
-    min-width: 0 !important;
-}
-
-input.input-lock-combo-activate {
-    display: none;
-}
-
-label.lock-combo-activate,
-.paste-button,
-.clear-button,
-.access-button {
-    height: 35px;
-    aspect-ratio: 1;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    cursor: pointer;
-}
-
-.InputContainer {
-    width: 100%;
-    height: 35px;
-    min-height: 35px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(to top left, var(--colorblue), var(--colorblack), var(--colorlightblue));
-    border-radius: 30px;
-    overflow: hidden;
-    position: relative;
-}
-
-.InputContainer::after {
-    content: '';
-    width: calc(100% - 10px);
-    height: calc(100% - 10px);
-    background-color: var(--colorwhite);
-    border-radius: 30px;
-    position: absolute;
-}
-
-.InputContainer>* {
-    width: calc(100% - 10px);
-    max-width: calc(100% - 10px);
-    height: calc(100% - 10px);
-    outline: none;
-    border: none;
-    caret-color: var(--colorlightblue);
-    background-color: transparent;
-    border-radius: 30px;
-    padding: 0px 10px;
-    letter-spacing: 0.8px;
-    color: var(--colorlightblue);
-    z-index: 1;
-}
-
-.hidden-InputContainer-pastebutton {
-    width: calc(100% + 10px);
-    position: absolute;
-    height: calc(100% + 10px);
-    background-color: rgba(var(--colorlightbluergb), 0.8);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 30px;
-    z-index: 2;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    animation: opacity 0.3s linear;
-}
-
-.hidden-InputContainer-pastebutton::before {
-    content: 'Locked';
-    color: white;
-}
-
-#lock-on {
-    display: none;
-}
-
-input.input-lock-combo-activate:checked+label.lock-combo-activate>#lock-off {
-    display: none;
-}
-
-input.input-lock-combo-activate:checked+label.lock-combo-activate>#lock-on {
-    display: inline;
-}
-
-input.input-lock-combo-activate:checked~div>.hidden-InputContainer-pastebutton {
-    display: flex;
-}
-
-h2,
-h3 {
-    display: inline;
-    text-align: left;
-    word-wrap: break-word;
-    word-break: break-word;
-    color: var(--colorlightblue);
-    user-select: none;
-    -webkit-user-select: none;
-    margin-bottom: 5px;
-    width: auto;
-    transition: 0.5s all;
-}
-
-h2:hover {
-    padding-inline: 15px;
-    border-radius: 15px;
-    background-color: var(--colorlightblue);
-    color: white;
-}
-
-.h2-hover:hover {
-    padding-inline: 15px;
-    border-radius: 15px;
-    background-color: var(--colorlightblue);
-    color: white;
-}
-
-.h2-hover:before {
-    content: '℗ ';
-    color: orangered;
-}
-
-.h2-hover:hover:before {
-    content: '';
-}
-
-.h2-hover:hover:after {
-    content: ' cá nhân';
-    color: orangered;
-}
-
-h3 {
-    text-align: left;
-}
-
-.gap5 {
-    gap: 5px
-}
-
-.gap10 {
-    gap: 10px
-}
-
-.input-checkbox-Open-button {
-    position: absolute;
-    top: -10px;
-    left: calc(50% - 2px);
-    transform: translate(-50%, 0%) scale(1.5);
-    outline: none;
-}
-
-select {
-    background-color: var(--colorlightblue);
-    color: white;
-    height: var(--heightOpenButton);
-    outline: none;
-    border: none;
-    border-radius: 50px;
-    padding-inline: 5px;
-    box-sizing: border-box;
-    width: 100%;
-}
-
-select>option {
-    background-color: var(--colorblue);
-    box-sizing: border-box;
-    padding-inline: 5px;
-}
-
-select> :first-child {
-    text-align: center;
-    color: black;
-    font-weight: bold;
-    background-color: orangered;
-}
-
-.Open-button:hover>.svg-hover>rect,
-.Open-button:hover>.svg-hover>path {
-    stroke: white;
-    transition: 0.3s all;
-}
-
-
-#Nhom-tools>input[type=checkbox] {
-    display: none;
-}
-
-#more-document-table,
-#Annoucements-table {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    overflow-y: auto;
-}
-
-#more-document-table table,
-#Annoucements-table table {
-    table-layout: fixed;
-    border-collapse: collapse;
-}
-
-#more-document-table td,
-#Annoucements-table td {
-    border: 1px solid var(--colorblue);
-    padding: 5px;
-    box-sizing: border-box;
-    font-size: 0.8rem;
-    user-select: text;
-}
-
-#more-document-table td:first-child,
-#Annoucements-table td:first-child {
-    width: 30%;
-}
-
-#more-document-table td:last-child,
-#Annoucements-table td:last-child {
-    width: 70%;
-}
-
-#more-document-table table a,
-#Annoucements-table table a,
-#ChatGPTClass-container a {
-    color: orangered;
-    font-style: italic;
-    cursor: pointer;
-}
-
-#ChatGPTClass {
-    background-color: orangered;
-    position: relative;
-    height: 100%;
-    aspect-ratio: 3;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: 1s all;
-    border-radius: 35px;
-    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.8);
-}
-
-#ChatGPTClass:after {
-    content: '';
-    transition: 1s all;
-    font-size: 0.2rem;
-}
-
-#ChatGPTClass:hover>#ChatGPTClass-container {
-    display: flex;
-}
-
-#ChatGPTClass:hover {
-    gap: 10px;
-}
-
-#ChatGPTClass:hover:after {
-    content: " Open AI";
-    font-size: 1.2rem;
-}
-
-#ChatGPTClass:hover #logo-chat-gpt {
-    height: 60%;
-    aspect-ratio: 1;
-}
-
-#ChatGPTClass-container {
-    width: 500px;
-    height: 500px;
-    position: absolute;
-    border: 1px solid orangered;
-    background-color: var(--colorwhite);
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%) translateY(calc(-100% + 5px));
-    z-index: 10;
-    color: var(--colorblack);
-    display: none;
-    flex-direction: column;
-    padding: 10px;
-    gap: 10px;
-    box-sizing: border-box;
-    border-radius: 10px;
-    box-shadow: 5px 5px 0 rgba(255, 68, 0, 0.658);
-}
-
-#ChatGPTClass-container>* {
-    box-sizing: border-box;
-}
-
-#ChatGPTClass-container> :first-child {
-    text-align: center;
-    height: auto;
-    width: 100%;
-    margin: 0;
-    border: none;
-}
-
-#ChatGPTClass-container> :nth-child(2) {
-    flex: 1;
-    border: 1px solid orange;
-    display: flex;
-    flex-direction: column;
-    justify-content: start;
-    align-items: start;
-    text-align: left;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-#ChatGPTClass-container> :nth-child(3) {
-    display: flex;
-    gap: 10px;
-    height: 2rem;
-}
-
-#ChatGPTClass-container> :last-child {
-    height: 4rem;
-    border: 1px solid orange;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-#ChatGPTClass-container> :nth-child(3)> :first-child {
-    flex: 1;
-}
-
-#ChatGPTClass-container> :nth-child(3)> :last-child {
-    flex: 2;
-}
-
-#ChatGPTClass-container select {
-    background-color: orangered;
-    height: 100%;
-}
-
-#ChatGPTClass-container select option {
-    background-color: rgb(255, 122, 74);
-}
-
-#ChatGPTClass-container summary::marker {
-    color: orangered;
-}
-
-#ChatGPTClass-container>details>span {
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
-#ChatGPTClass-container span {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    white-space: normal;
-}
 
-#ChatGPTClass-container textarea {
-    resize: none;
-    width: calc(100% - 30px);
-    height: 100%;
-    padding: 10px;
-    margin: 0;
-    box-sizing: border-box;
-    border: none;
-    outline: none;
-    background-color: var(--colorwhite);
-}
-
-#ChatGPTClass-container input {
-    width: 100%;
-    height: 100%;
-    padding-inline: 10px;
-    margin: 0;
-    box-sizing: border-box;
-    border: none;
-    outline: none;
-    background-color: var(--colorwhite);
-    border: 1px solid orange;
-    color: var(--colorblack);
-    display: none;
-}
-
-#logo-chat-gpt {
-    height: 80%;
-    aspect-ratio: 1;
-    transition: 1s all;
-}
-
-#edit-new-password,
-#edit-new-nickname {
-    width: 100%;
-    box-sizing: border-box;
-    outline: none;
-}
-
-.empty-SMS {
-    box-shadow: none;
-    cursor: pointer;
-    background: gray;
-}
-
-.empty-SMS::after {
-    content: 'Adjust Personal SMS';
-    color: black;
-    font-weight: bold;
-}
-
-.empty-SMS:hover {
-    background: gray;
-    box-shadow: inset 5px 5px 5px black;
-}
-
-.empty-SMS:hover:after {
-    content: 'Click to Adjust Personal SMS';
-}
-
-.My-Personal-SMS::before {
-    content: 'My Personal SMS';
-}
-
-.hidden {
-    display: none;
-}
-
-.flex {
-    display: flex;
-}
-
-.column {
-    flex-direction: column;
-}
-
-.jc-sb {
-    justify-content: space-between;
-}
-
-.jc-center {
-    justify-content: center;
-}
-
-.ai-c {
-    align-items: center;
-    text-align: center;
-}
-
-.grid {
-    display: grid;
-}
-
-.hidden_visibility {
-    visibility: hidden;
-}
-
-#BoxEditPersonalSMS {
-    gap: 10px;
-}
-
-#AdddivWrapper {
-    display: none;
-}
-
-#BoxEditPersonalSMS>* {
-    width: 99%;
-    display: flex;
-    gap: 10px;
-}
-
-#BoxEditPersonalSMS>h2 {
-    font-size: 1.2rem;
-}
-
-#BoxEditPersonalSMSFromFetch {
-    flex-direction: column;
-}
-
-#BoxEditPersonalSMSFromFetch>* {
-    display: flex;
-    gap: 10px;
-    height: 60px;
-}
-
-#BoxEditPersonalSMS> :nth-child(2)> :first-child,
-#BoxEditPersonalSMSFromFetch>*> :first-child {
-    width: 30%;
-}
-
-#BoxEditPersonalSMS> :nth-child(2)> :last-child,
-#BoxEditPersonalSMSFromFetch>*> :last-child {
-    width: 70%;
-}
-
-#BoxEditPersonalSMS input,
-#BoxEditPersonalSMS textarea {
-    background-color: var(--colorwhite);
-    color: var(--colorblack);
-    outline: none;
-    box-sizing: border-box;
-    resize: none;
-    border: 1px solid var(--colorlightblue);
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 1rem;
-}
-
-.close-in-container,
-.refresh-in-container {
-    min-width: 45px;
-    min-height: 45px;
-    height: 45px;
-    width: 45px;
-    border-radius: 50%;
-    padding: 5px;
-    background-color: red;
-    box-shadow: inset 0 0 10px blue;
-}
-
-.close-in-container:hover,
-.refresh-in-container:hover {
-    box-shadow: none;
-    background-color: red;
-}
-
-.close-in-container:active,
-.refresh-in-container:active {
-    transform: translate(0, 0);
-}
-
-.refresh-in-container,
-.refresh-in-container:hover {
-    background-color: green;
-}
