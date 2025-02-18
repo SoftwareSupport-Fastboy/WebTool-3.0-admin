@@ -138,17 +138,23 @@ function updateStoreTime() {
             hour = 0;
         }
 
-        // Cập nhật giờ cho đối tượng Date, xử lý múi giờ địa phương
+        // Cập nhật giờ cho đối tượng Date
         date.setHours(hour);  // Sử dụng setHours để đảm bảo múi giờ địa phương
 
-        // Định dạng ngày và giờ theo mẫu yêu cầu (ngày theo "DD-MM-YYYY" và chỉ giờ AM/PM)
+        // Định dạng ngày và giờ theo mẫu yêu cầu (ngày theo "DD-MM-YYYY" và giờ theo "hh:mm AM/PM")
         const optionsDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
-        const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-        const hour12 = (hour % 12 || 12);  // Chuyển đổi giờ 24h sang 12h
-        const formattedTime = `${formattedDate}, ${hour12} ${ampm}`;
+        const formattedDate = date.toLocaleDateString('en-GB', optionsDate);  // Dùng 'en-GB' để lấy định dạng DD-MM-YYYY
+        const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const formattedTime = date.toLocaleTimeString('en-US', optionsTime);  // Định dạng giờ
+
+        // Ghép ngày và giờ lại với nhau theo định dạng "DD-MM-YYYY hh:mm AM/PM"
+        const formattedDateTime = `${formattedDate} ${formattedTime}`;
 
         // Cập nhật giá trị hiển thị cho Current-store-time
-        document.getElementById("Current-store-time").textContent = formattedTime;
+        document.getElementById("Current-store-time").textContent = formattedDateTime;
+
+        // Trả về đối tượng Date để tính toán chênh lệch giờ sau này
+        return date;
     }
 }
 
@@ -159,27 +165,37 @@ function updateTexasTime() {
     // Tạo đối tượng Date từ thời gian hiện tại ở Texas
     const dateInTX = new Date(texasTime);
 
+    // Đặt số phút thành 00
+    dateInTX.setMinutes(0);
+
     // Định dạng ngày và giờ cho phần tử #Now-date-in-TX và #Now-time-in-TX
     const optionsDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
-    const formattedDate = dateInTX.toLocaleDateString('en-US', optionsDate);
+    const formattedDate = dateInTX.toLocaleDateString('en-GB', optionsDate);  // Dùng 'en-GB' để lấy định dạng DD-MM-YYYY
 
-    const optionsTime = { hour: '2-digit', hour12: true };
-    let formattedTime = dateInTX.toLocaleTimeString('en-US', optionsTime);
+    const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+    let formattedTime = dateInTX.toLocaleTimeString('en-US', optionsTime);  // Định dạng giờ
 
-    // Loại bỏ khoảng cách giữa giờ và AM/PM (nếu có)
-    formattedTime = formattedTime.replace(/ /g, '');
+    formattedTime = formattedTime.replace(/([APM]{2})$/, ' $1');  // Đảm bảo giờ có AM/PM
 
+    // Ghép lại và đưa vào #Now-in-TX theo định dạng "DD-MM-YYYY hh:mm AM/PM"
+    const formattedNow = `${formattedDate} ${formattedTime}`;
+    
     // Cập nhật các phần tử #Now-date-in-TX và #Now-time-in-TX
-    document.getElementById("Now-date-in-TX").textContent = formattedDate;
-    document.getElementById("Now-time-in-TX").textContent = formattedTime;
+    // document.getElementById("Now-date-in-TX").textContent = formattedDate;
+    // document.getElementById("Now-time-in-TX").textContent = formattedTime;
 
-    // Ghép lại và đưa vào #Now-in-TX
-    const formattedNow = `${formattedDate}, ${formattedTime}`;
+    // Cập nhật #Now-in-TX
     document.getElementById("Now-in-TX").textContent = formattedNow;
+
+    // Trả về đối tượng Date để tính toán chênh lệch giờ sau này
+    return dateInTX;
 }
 
 // Gọi hàm updateTexasTime để cập nhật thời gian lúc load trang
 updateTexasTime();
+setInterval(updateTexasTime, 1000);
+
+
 
 function updateCustomerTime() {
     const dateInput = document.getElementById("input-Time-chosen-by-customer").value;
@@ -188,8 +204,8 @@ function updateCustomerTime() {
 
     // Kiểm tra nếu có đủ thông tin
     if (dateInput && hourInput && ampm) {
-        // Tạo đối tượng Date từ ngày đầu vào và ép nó thành UTC để tránh lỗi múi giờ
-        const date = new Date(dateInput + "T00:00:00"); // Tạo ngày 16/02/2025 ở múi giờ UTC
+        // Tạo đối tượng Date từ ngày đầu vào và sử dụng múi giờ địa phương
+        const date = new Date(dateInput + "T00:00:00");  // Tạo ngày từ input, mặc định là 00:00 theo múi giờ địa phương
 
         let hour = parseInt(hourInput);
 
@@ -204,191 +220,88 @@ function updateCustomerTime() {
         }
 
         // Cập nhật giờ cho đối tượng Date
-        date.setHours(hour);
+        date.setHours(hour);  // Sử dụng setHours để đảm bảo múi giờ địa phương
 
-        // Định dạng ngày và giờ theo mẫu yêu cầu (ngày theo "DD-MM-YYYY" và chỉ giờ AM/PM)
+        // Định dạng ngày và giờ theo mẫu yêu cầu (ngày theo "DD-MM-YYYY" và giờ theo "hh:mm AM/PM")
         const optionsDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
-        const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-        const hour12 = (hour % 12 || 12);  // Chuyển đổi giờ 24h sang 12h
-        const formattedTime = `${formattedDate}, ${hour12} ${ampm}`;
+        const formattedDate = date.toLocaleDateString('en-GB', optionsDate);  // Dùng 'en-GB' để lấy định dạng DD-MM-YYYY
+        const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const formattedTime = date.toLocaleTimeString('en-US', optionsTime);  // Định dạng giờ
+
+        // Ghép ngày và giờ lại với nhau theo định dạng "DD-MM-YYYY hh:mm AM/PM"
+        const formattedDateTime = `${formattedDate} ${formattedTime}`;
 
         // Cập nhật giá trị hiển thị cho Current-store-time
-        document.getElementById("Date-Time-chosen-by-customer").textContent = formattedTime;
+        document.getElementById("Date-Time-chosen-by-customer").textContent = formattedDateTime;
+
+        // Trả về đối tượng Date để tính toán chênh lệch giờ sau này
+        return date;
     }
 }
 
 
 function calculateTimeDifference() {
-    // Lấy giá trị từ phần tử #Current-store-time và #Now-in-TX
-    const currentStoreTime = document.getElementById("Current-store-time").textContent;
-    const nowInTX = document.getElementById("Now-in-TX").textContent;
+    const storeTime = updateStoreTime();  // Lấy thời gian từ hàm updateStoreTime
+    const texasTime = updateTexasTime();  // Lấy thời gian từ hàm updateTexasTime
 
-    if (currentStoreTime && nowInTX) {
-        // Chuyển đổi chuỗi thời gian của Current-store-time và Now-in-TX sang đối tượng Date
-        const currentStoreDate = parseDate(currentStoreTime);
-        const texasTimeDate = parseDate(nowInTX);
+    // Kiểm tra nếu cả hai giá trị đều hợp lệ
+    if (storeTime && texasTime) {
+        // Tính sự chênh lệch thời gian mà không cần giá trị tuyệt đối
+        const timeDifference = storeTime - texasTime;  // Không sử dụng Math.abs()
 
-        // Tính toán sự chênh lệch giữa hai thời gian
-        const diffInMilliseconds = currentStoreDate - texasTimeDate;
+        // Chuyển sự chênh lệch từ milliseconds sang giờ và làm tròn
+        const differenceInHours = Math.round(timeDifference / (1000 * 60 * 60));  // Cắt phần thập phân
 
-        // Chuyển đổi sự chênh lệch thành giờ và phút
-        const diffInHours = Math.floor(diffInMilliseconds / (1000 * 60 * 60));
-
-        // Cập nhật #chech-lech-gio với kết quả
-        document.getElementById("chech-lech-gio").textContent = `${diffInHours}`;
-    }
-}
-
-function parseDate(timeString) {
-    const [datePart, timePart] = timeString.split(', ');
-    const [month, day, year] = datePart.split('/').map(num => parseInt(num, 10));
-    let [hour, minute] = timePart.split(':');
-    const period = timePart.slice(-2);
-
-    // Điều chỉnh giờ theo AM/PM
-    if (period === 'PM' && hour !== '12') {
-        hour = parseInt(hour, 10) + 12;
-    } else if (period === 'AM' && hour === '12') {
-        hour = 0;
-    } else {
-        hour = parseInt(hour, 10);
-    }
-
-    // Tạo đối tượng Date từ thông tin đã phân tích
-    return new Date(year, month - 1, day, hour, minute || 0);
-}
-
-
-
-function calculateAppointmentTime() {
-    // Lấy giá trị từ #Date-Time-chosen-by-customer và #chech-lech-gio
-    const chosenTime = document.getElementById("Date-Time-chosen-by-customer").textContent;
-    const timeDifferenceText = document.getElementById("chech-lech-gio").textContent;
-
-    console.log("Chosen Time:", chosenTime); // Log thời gian khách hàng đã chọn
-    console.log("Time Difference:", timeDifferenceText); // Log sự chênh lệch thời gian
-
-    if (chosenTime && timeDifferenceText) {
-        // Phân tích thời gian đã chọn (mm/dd/yyyy, h AM/PM)
-        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}) (\w{2})$/;
-        const match = chosenTime.match(dateRegex);
-
-        if (match) {
-            const month = parseInt(match[1], 10) - 1;  // Tháng trong Date() bắt đầu từ 0
-            const day = parseInt(match[2], 10);
-            const year = parseInt(match[3], 10);
-            let hour = parseInt(match[4], 10);
-            const ampm = match[5];
-
-            // Đảm bảo giờ không phải là 12AM
-            if (ampm === "AM" && hour === 12) {
-                hour = 0;
-            } else if (ampm === "PM" && hour !== 12) {
-                hour += 12;  // Cộng thêm 12 giờ nếu là PM
-            }
-
-            // Tạo đối tượng Date từ thông tin đã phân tích
-            let customerDate = new Date(year, month, day, hour);
-
-            console.log("Initial Date:", customerDate); // Log đối tượng Date ban đầu
-
-            // Phân tích #chech-lech-gio để lấy số giờ
-            const hoursDifference = parseInt(timeDifferenceText, 10);
-
-            console.log("Hours Difference:", hoursDifference); // Log số giờ chênh lệch
-
-            // Trừ đi số giờ từ thời gian đã chọn
-            customerDate.setHours(customerDate.getHours() - hoursDifference); // Cộng hoặc trừ giờ
-
-            console.log("Updated Date:", customerDate); // Log đối tượng Date sau khi trừ thời gian
-
-            // Định dạng lại ngày theo yêu cầu "Sun, 16-02-2025"
-            const optionsDate = { 
-                weekday: 'short', // Tên ngày trong tuần (Sun, Mon, ...)
-                day: '2-digit',   // Ngày theo định dạng 2 chữ số
-                month: '2-digit', // Tháng theo định dạng 2 chữ số
-                year: 'numeric'   // Năm theo định dạng đầy đủ
-            };
-            let formattedDate = customerDate.toLocaleDateString('en-GB', optionsDate);
-
-            // Thay dấu '/' thành '-'
-            formattedDate = formattedDate.replace(/\//g, '-');
-
-            // Định dạng lại giờ theo yêu cầu "h AM/PM"
-            const formattedTime = customerDate.toLocaleTimeString('en-US', { hour: '2-digit', hour12: true });
-
-            console.log("Formatted Date:", formattedDate); // Log ngày đã định dạng
-            console.log("Formatted Time:", formattedTime); // Log giờ đã định dạng
-
-            // Cập nhật phần tử #date-right-appointments-in-TX và #time-right-appointments-in-TX
-            document.getElementById("date-right-appointments-in-TX").textContent = formattedDate;
-            document.getElementById("time-right-appointments-in-TX").textContent = formattedTime;
+        // Kiểm tra nếu differenceInHours là số âm
+        if (differenceInHours < 0) {
+            // Nếu là số âm, thông báo tiệm trễ hơn Texas
+            document.getElementById("chech-lech-gio").innerHTML  = `${differenceInHours} giờ, nghĩa là Giờ Tiệm <span style="color:red">TRỄ</span> hơn Giờ Texas ${Math.abs(differenceInHours)} giờ`;
+        } else if (differenceInHours > 0) {
+            // Nếu là số dương, thông báo tiệm sớm hơn Texas
+            document.getElementById("chech-lech-gio").innerHTML = `${differenceInHours} giờ, nghĩa là Giờ Tiệm <span style="color:red">SỚM</span> hơn Giờ Texas ${Math.abs(differenceInHours)} giờ`;
+        } else {
+            // Nếu là 0, thông báo không có sự chênh lệch
+            document.getElementById("chech-lech-gio").innerHTML = `${differenceInHours} giờ, nghĩa là Giờ Tiệm và Giờ Texas <span style="color:red">BẰNG NHAU</span>`;
         }
     }
 }
 
 
 
-// function calculateAppointmentTime() {
-//     // Step 1: Extract values from the inputs
-//     let storeHour = parseInt(document.getElementById("Now-hour-time-in-store").value);
-//     let storeAmPm = document.getElementById("store-am-pm").value;
+function calculateAppointmentTime() {
+    // Lấy thời gian khách hàng đã chọn từ updateCustomerTime
+    const customerTime = updateCustomerTime();  
 
-//     let customerHour = parseInt(document.getElementById("hour-time-they-choose").value);
-//     let customerAmPm = document.getElementById("customer-am-pm").value;
+    // Lấy sự chênh lệch thời gian từ calculateTimeDifference
+    const timeDifferenceText = document.getElementById("chech-lech-gio").textContent;
+    const timeDifference = parseInt(timeDifferenceText.split(":")[0].trim());  // Lấy số giờ từ phần tử #chech-lech-gio
+    
+    // Kiểm tra nếu customerTime và timeDifference hợp lệ
+    if (customerTime && !isNaN(timeDifference)) {
+        // Trừ sự chênh lệch giờ từ thời gian khách hàng đã chọn
+        const appointmentTime = new Date(customerTime);
+        appointmentTime.setHours(appointmentTime.getHours() - timeDifference);
 
-//     // Step 2: Convert store time to 24-hour format (ignore minutes)
-//     if (storeAmPm === "PM" && storeHour !== 12) {
-//         storeHour += 12;
-//     } else if (storeAmPm === "AM" && storeHour === 12) {
-//         storeHour = 0;
-//     }
+        // Định dạng lại thời gian của cuộc hẹn theo định dạng "Mon, 19-02-2025"
+        const optionsDate = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
+        const formattedDate = appointmentTime.toLocaleDateString('en-GB', optionsDate);  // Dùng 'en-GB' để lấy định dạng "Mon, 19-02-2025"
+        
+        // Thay đổi dấu phân cách '/' thành '-'
+        const formattedDateWithDash = formattedDate.replace(/\//g, '-');
 
-//     // Convert customer time to 24-hour format (ignore minutes)
-//     if (customerAmPm === "PM" && customerHour !== 12) {
-//         customerHour += 12;
-//     } else if (customerAmPm === "AM" && customerHour === 12) {
-//         customerHour = 0;
-//     }
+        const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const formattedTime = appointmentTime.toLocaleTimeString('en-US', optionsTime);  // Định dạng giờ
 
-//     // Step 3: Get the current Texas time from the page (in 12-hour format)
-//     let texasTime = document.getElementById("Now-time-in-TX").innerText;
-//     let texasAmPm = texasTime.split(" ")[1]; // AM or PM
-//     let texasHour = parseInt(texasTime.split(":")[0]);
+        // Cập nhật giá trị hiển thị cho phần tử #date-right-appointments-in-TX (chỉ ngày)
+        document.getElementById("date-right-appointments-in-TX").textContent = formattedDateWithDash;
 
-//     // Convert Texas time from 12-hour to 24-hour format (ignore minutes)
-//     if (texasAmPm === "PM" && texasHour !== 12) {
-//         texasHour += 12;
-//     } else if (texasAmPm === "AM" && texasHour === 12) {
-//         texasHour = 0;
-//     }
+        // Cập nhật giá trị hiển thị cho phần tử #time-right-appointments-in-TX (chỉ giờ)
+        document.getElementById("time-right-appointments-in-TX").textContent = formattedTime;
+    }
+}
 
-//     // Step 4: Calculate the difference between store time and Texas time
-//     let storeTimeInHours = storeHour;
-//     let texasTimeInHours = texasHour;
 
-//     // Calculate the difference, ensuring the time difference is positive
-//     let timeDifference = texasTimeInHours - storeTimeInHours;
 
-//     if (timeDifference < 0) {
-//         // If the time difference is negative (i.e., Texas time is earlier), adjust by adding 24 hours
-//         timeDifference += 24;
-//     }
-
-//     // Step 5: Adjust customer's time based on the time difference
-//     let adjustedCustomerTimeInTexas = (customerHour + timeDifference) % 24;
-
-//     // Convert adjusted time back to 12-hour format
-//     let adjustedCustomerAmPm = adjustedCustomerTimeInTexas >= 12 ? "PM" : "AM";
-//     if (adjustedCustomerTimeInTexas > 12) {
-//         adjustedCustomerTimeInTexas -= 12;
-//     } else if (adjustedCustomerTimeInTexas === 0) {
-//         adjustedCustomerTimeInTexas = 12;
-//     }
-
-//     // Step 6: Display the appointment time in Texas time
-//     document.getElementById("time-right-appointments-in-TX").innerText = `${adjustedCustomerTimeInTexas} ${adjustedCustomerAmPm}`;
-// }
 
 
 
