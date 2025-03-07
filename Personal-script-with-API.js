@@ -984,7 +984,7 @@ function createToDoLine(line, index) {
 
         if (divGroup) {
             // Tìm inputdateremindertodo trong divGroup đó
-            const inputdateremindertodo = divGroup.querySelector('input[type="text"]');
+            const inputdateremindertodo = divGroup.querySelector('input[type="date"]');
 
             if (inputdateremindertodo) {
                 inputdateremindertodo.value = ''; // Clear thông tin date
