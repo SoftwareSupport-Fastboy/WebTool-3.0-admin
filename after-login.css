@@ -1304,6 +1304,9 @@ div#Current-Number-of-To-do-list {
     gap: 1rem;
 }
 
+.Chinh-sua-cap-nhat-lichtruccuoituan *, .Chinh-sua-cap-nhat-lichtruccuoituan *::placeholder {
+    font-size: 1.3rem;
+}
 
 #sua-o-cuoi-cung-trong-sheet,
 #sua-o-dau-tien-trong-sheet,
@@ -1311,7 +1314,7 @@ div#Current-Number-of-To-do-list {
 #updateA1Btn,
 #refresh-lichtruc {
     width: 7rem;
-    height: 2rem;
+    height: 3rem;
     background-color: var(--colorblue);
     border-radius: 1rem;
     padding: 0.8rem;
@@ -1356,7 +1359,6 @@ div#Current-Number-of-To-do-list {
 #sua-ten-sheet::placeholder,
 #sua-o-cuoi-cung-trong-sheet::placeholder,
 #sua-o-dau-tien-trong-sheet::placeholder {
-    font-size: 0.7rem;
     text-align: center;
 }
 
